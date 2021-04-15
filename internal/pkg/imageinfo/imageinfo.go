@@ -5,11 +5,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/laetho/metagraf/internal/pkg/helpers"
+	"github.com/laetho/metagraf/internal/pkg/params"
+	"github.com/laetho/metagraf/pkg/metagraf"
+	"github.com/laetho/metagraf/pkg/mgver"
 	corev1 "k8s.io/api/core/v1"
-	"metagraf/internal/pkg/helpers/helpers"
-	"metagraf/internal/pkg/params/params"
-	"metagraf/pkg/metagraf"
-	"metagraf/pkg/mgver"
 )
 
 // Type alias of Config type from go-containerregistry, for creating our own method sets.
@@ -39,16 +39,16 @@ func ImageInfo(imageref string) (Info, error) {
 
 	ref, err := name.ParseReference(imageref)
 	if err != nil {
-		return Info{},err
+		return Info{}, err
 	}
 
 	var options []remote.Option
 
-	options = append(options, remote.WithUserAgent("mg v"+ mgver.GitTag))
+	options = append(options, remote.WithUserAgent("mg v"+mgver.GitTag))
 	if len(params.RegistryUser) > 0 {
 		options = append(options, remote.WithAuth(authn.FromConfig(authn.AuthConfig{
-			Username:      params.RegistryUser,
-			Password:      params.RegistryPassword,
+			Username: params.RegistryUser,
+			Password: params.RegistryPassword,
 		})))
 	} else {
 		options = append(options, remote.WithAuth(authn.Anonymous))
@@ -62,7 +62,6 @@ func ImageInfo(imageref string) (Info, error) {
 	config, _ := img.ConfigFile()
 	return Info(config.Config), nil
 }
-
 
 // Turns the OCI or Docker image volume information into a
 // slice of corev1.Volume{}

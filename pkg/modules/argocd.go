@@ -23,13 +23,13 @@ import (
 	"fmt"
 	argoapp "github.com/argoproj/argo-cd/pkg/apis/application/v1alpha1"
 	"github.com/golang/glog"
+	"github.com/laetho/metagraf/internal/pkg/k8sclient"
+	"github.com/laetho/metagraf/internal/pkg/params"
+	"github.com/laetho/metagraf/pkg/metagraf"
 	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	log "k8s.io/klog"
-	"metagraf/internal/pkg/k8sclient/k8sclient"
-	"metagraf/internal/pkg/params/params"
-	"metagraf/pkg/metagraf"
 	"os"
 )
 
@@ -64,7 +64,7 @@ func GetArgoCDSourceDirectory() *argoapp.ApplicationSourceDirectory {
 	return &asd
 }
 
-func GenArgoApplication(mg *metagraf.MetaGraf) {
+func GenArgoApplication(mg *metagraf.MetaGraf) argoapp.Application {
 
 	var meta []argoapp.Info
 
@@ -74,14 +74,14 @@ func GenArgoApplication(mg *metagraf.MetaGraf) {
 			APIVersion: "argoproj.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      Name(mg),
+			Name:      mg.Name(OName, Version),
 			Namespace: GetArgoCDApplicationNamespace(),
-			Labels:    mg.Labels(Name(mg)),
+			Labels:    mg.Metadata.Labels,
 		},
 		Spec: argoapp.ApplicationSpec{
 			Destination: argoapp.ApplicationDestination{
 				Server:    "https://kubernetes.default.svc",
-				Namespace: NameSpace,
+				Namespace: params.NameSpace,
 			},
 			Source: argoapp.ApplicationSource{
 				RepoURL:        params.ArgoCDApplicationRepoURL,
@@ -95,55 +95,53 @@ func GenArgoApplication(mg *metagraf.MetaGraf) {
 		},
 		Operation: nil,
 	}
+	return obj
+}
 
-	if !Dryrun {
-		StoreArgoCDApplication(obj)
+func OutputArgoCDApplication(obj argoapp.Application) {
+	opt := json.SerializerOptions{
+		Yaml:   false,
+		Pretty: true,
+		Strict: true,
 	}
-	if Output {
-		opt := json.SerializerOptions{
-			Yaml:   false,
-			Pretty: true,
-			Strict: true,
-		}
-		s := json.NewSerializerWithOptions(json.DefaultMetaFactory, nil, nil, opt)
+	s := json.NewSerializerWithOptions(json.DefaultMetaFactory, nil, nil, opt)
 
-		var buff bytes.Buffer
-		err := s.Encode(obj.DeepCopyObject(), &buff)
-		if err != nil {
-			log.Error(err)
-			os.Exit(1)
-		}
-		jsonMap := make(map[string]interface{})
-		err = gojson.Unmarshal(buff.Bytes(), &jsonMap)
+	var buff bytes.Buffer
+	err := s.Encode(obj.DeepCopyObject(), &buff)
+	if err != nil {
+		log.Error(err)
+		os.Exit(1)
+	}
+	jsonMap := make(map[string]interface{})
+	err = gojson.Unmarshal(buff.Bytes(), &jsonMap)
+	if err != nil {
+		panic(err)
+	}
+
+	delete(jsonMap, "status")
+
+	if Format == "json" {
+		oj, err := gojson.MarshalIndent(jsonMap, "", "  ")
 		if err != nil {
 			panic(err)
 		}
-
-		delete(jsonMap, "status")
-
-		if Format == "json" {
-			oj, err := gojson.MarshalIndent(jsonMap, "", "  ")
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println(string(oj))
-			return
-		} else {
-			oy, err := yaml.Marshal(jsonMap)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println(string(oy))
+		fmt.Println(string(oj))
+		return
+	} else {
+		oy, err := yaml.Marshal(jsonMap)
+		if err != nil {
+			panic(err)
 		}
+		fmt.Println(string(oy))
 	}
 }
 
 func StoreArgoCDApplication(obj argoapp.Application) {
 
-	glog.Infof("ResourceVersion: %v Length: %v", obj.ResourceVersion, len(obj.ResourceVersion))
-	glog.Infof("Namespace: %v", NameSpace)
+	glog.V(2).Infof("ResourceVersion: %v Length: %v", obj.ResourceVersion, len(obj.ResourceVersion))
+	glog.V(2).Infof("Namespace: %v", params.NameSpace)
 
-	client := k8sclient.GetArgoCDClient().Applications(NameSpace)
+	client := k8sclient.GetArgoCDClient().Applications(params.NameSpace)
 	if len(obj.ResourceVersion) > 0 {
 		// update
 		result, err := client.Update(context.TODO(), &obj, metav1.UpdateOptions{})

@@ -17,34 +17,31 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
+	"github.com/laetho/metagraf/internal/pkg/params"
+	"github.com/laetho/metagraf/pkg/generators/argocd"
+	"github.com/laetho/metagraf/pkg/metagraf"
 	"github.com/spf13/cobra"
-	"metagraf/internal/pkg/params/params"
-	"metagraf/pkg/metagraf"
-	"metagraf/pkg/modules"
-	"os"
 )
 
 func init() {
 	RootCmd.AddCommand(argocdCmd)
 	argocdCmd.AddCommand(argocdCreateCmd)
-	argocdCreateCmd.PersistentFlags().BoolVar(&Verbose, "verbose", false, "verbose output")
-	argocdCreateCmd.PersistentFlags().BoolVar(&Output, "output", false, "also output objects")
-	argocdCreateCmd.PersistentFlags().StringVarP(&Format, "format","o","json", "specify json or yaml, json id default")
-	argocdCreateCmd.PersistentFlags().BoolVar(&Dryrun, "dryrun", false, "do not create objects, only output")
-	argocdCreateCmd.PersistentFlags().StringVarP(&Namespace, "namespace", "n","", "namespace to work on")
+	argocdCreateCmd.PersistentFlags().BoolVar(&params.Output, "output", false, "also output objects")
+	argocdCreateCmd.PersistentFlags().StringVarP(&params.Format, "format", "o", "json", "specify json or yaml, json id default")
+	argocdCreateCmd.PersistentFlags().BoolVar(&params.Dryrun, "dryrun", false, "do not create objects, only output")
+	argocdCreateCmd.PersistentFlags().StringVarP(&params.NameSpace, "namespace", "n", "", "namespace to work on")
 	argocdCreateCmd.AddCommand(argocdCreateApplicationCmd)
-	argocdCreateApplicationCmd.Flags().StringVar(&params.ArgoCDApplicationProject, "project","", "Project reference")
-	argocdCreateApplicationCmd.Flags().StringVar(&params.ArgoCDApplicationNamespace, "argo-namespace", "", "Namespace for the ArgoCD Application resource.")
-	argocdCreateApplicationCmd.Flags().StringVarP(&params.ArgoCDApplicationRepoURL, "repo", "r", "", "Repository URL")
-	argocdCreateApplicationCmd.Flags().StringVarP(&params.ArgoCDApplicationRepoPath, "path", "p", "", "Path to manifests inside the repository")
-	argocdCreateApplicationCmd.Flags().StringVar(&params.ArgoCDApplicationTargetRevision, "target-revision", params.ArgoCDApplicationTargetRevision, "Git ref for commit to synchronise.")
-	argocdCreateApplicationCmd.Flags().BoolVar(&params.ArgoCDApplicationSourceDirectoryRecurse, "recurse", false, "Recursively traverse basepath looking for manifests")
-	argocdCreateApplicationCmd.Flags().BoolVar(&params.ArgoCDSyncPolicyRetry, "retry", false, "Retry failed synchronizations?")
-	argocdCreateApplicationCmd.Flags().Int64Var(&params.ArgoCDSyncPolicyRetryLimit, "retry-limit", 2, "Retry limit")
-	argocdCreateApplicationCmd.Flags().BoolVarP(&params.ArgoCDAutomatedSyncPolicy, "auto", "a", false, "Generate an automated sync policy?")
-	argocdCreateApplicationCmd.Flags().BoolVar(&params.ArgoCDAutomatedSyncPolicyPrune, "auto-prune", false, "Automatically delete removed items")
-	argocdCreateApplicationCmd.Flags().BoolVar(&params.ArgoCDAutomatedSyncPolicySelfHeal, "auto-heal", false, "Try to self heal?")
+	argocdCreateApplicationCmd.Flags().StringVar(&argocd.AppOpts.ApplicationProject, "project", "", "Project reference")
+	argocdCreateApplicationCmd.Flags().StringVar(&argocd.AppOpts.ApplicationDestinationNamespace, "argo-namespace", "", "Namespace for the ArgoCD Application resource.")
+	argocdCreateApplicationCmd.Flags().StringVarP(&argocd.AppOpts.ApplicationRepoURL, "repo", "r", "", "Repository URL")
+	argocdCreateApplicationCmd.Flags().StringVarP(&argocd.AppOpts.ApplicationRepoPath, "path", "p", "", "Path to manifests inside the repository")
+	argocdCreateApplicationCmd.Flags().StringVar(&argocd.AppOpts.ApplicationTargetRevision, "target-revision", params.ArgoCDApplicationTargetRevision, "Git ref for commit to synchronise.")
+	argocdCreateApplicationCmd.Flags().BoolVar(&argocd.AppOpts.ApplicationSourceDirectoryRecurse, "recurse", false, "Recursively traverse basepath looking for manifests")
+	argocdCreateApplicationCmd.Flags().BoolVar(&argocd.AppOpts.SyncPolicyRetry, "retry", false, "Retry failed synchronizations?")
+	argocdCreateApplicationCmd.Flags().Int64Var(&argocd.AppOpts.SyncPolicyRetryLimit, "retry-limit", 2, "Retry limit")
+	argocdCreateApplicationCmd.Flags().BoolVarP(&argocd.AppOpts.AutomatedSyncPolicy, "auto", "a", false, "Generate an automated sync policy?")
+	argocdCreateApplicationCmd.Flags().BoolVar(&argocd.AppOpts.AutomatedSyncPolicyPrune, "auto-prune", false, "Automatically delete removed items")
+	argocdCreateApplicationCmd.Flags().BoolVar(&argocd.AppOpts.AutomatedSyncPolicySelfHeal, "auto-heal", false, "Try to self heal?")
 
 	_ = argocdCreateCmd.MarkPersistentFlagRequired("namespace")
 	_ = argocdCreateApplicationCmd.MarkFlagRequired("project")
@@ -64,22 +61,48 @@ var argocdCreateCmd = &cobra.Command{
 	Long:  `Create Subcommands for ArgoCD`,
 }
 
+/*
 var argocdCreateApplicationCmd = &cobra.Command{
 	TraverseChildren: true,
-	Use:   "application <metagraf>",
-	Short: "argocd create application",
-	Long:  `Creates an ArgoCD Application from a metagraf specification`,
+	Use:              "application <metagraf>",
+	Short:            "argocd create application",
+	Long:             `Creates an ArgoCD Application from a metagraf specification`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) < 1 {
-			fmt.Println("Insufficient arguments")
-			os.Exit(-1)
-		}
+		requireMetagraf(args)
+		requireNamespace()
 		mg := metagraf.Parse(args[0])
-		FlagPassingHack()
 
-		if len(modules.NameSpace) == 0 {
-			modules.NameSpace = Namespace
+		app := modules.GenArgoApplication(&mg, )
+		if !params.Dryrun {
+			modules.StoreArgoCDApplication(app)
 		}
-		modules.GenArgoApplication(&mg)
+		if params.Output{
+			modules.OutputArgoCDApplication(app)
+		}
+	},
+}
+*/
+
+var argocdCreateApplicationCmd = &cobra.Command{
+	TraverseChildren: true,
+	Use:              "application <metagraf>",
+	Short:            "argocd create application",
+	Long:             `Creates an ArgoCD Application resource from a metagraf specification`,
+	Run: func(cmd *cobra.Command, args []string) {
+		requireMetagraf(args)
+		requireNamespace()
+		mg := metagraf.Parse(args[0])
+
+		generator := argocd.NewApplicationGenerator(mg, metagraf.MGProperties{}, argocd.AppOpts)
+		app := generator.Application(mg.Name(OName, Version))
+
+		if params.Output {
+			argocd.OutputApplication(app, params.Format)
+		}
+
+		if !params.Dryrun {
+			argocd.StoreApplication(app)
+		}
+
 	},
 }

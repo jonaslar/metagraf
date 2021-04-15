@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	params "github.com/laetho/metagraf/internal/pkg/params"
+	"github.com/laetho/metagraf/pkg/metagraf"
+	"github.com/laetho/metagraf/pkg/modules"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	log "k8s.io/klog"
-	params "metagraf/internal/pkg/params/params"
-	"metagraf/pkg/metagraf"
-	"metagraf/pkg/modules"
 	"os"
 )
 
@@ -85,7 +85,7 @@ func ValidateProperties(mgprops metagraf.MGProperties) bool {
 	reqvars := mgprops.GetRequired().SourceKeyMap(true)
 
 	fail := false
-	for key, _ := range reqvars {
+	for key := range reqvars {
 		property := mgprops[key]
 		if len(property.Value) == 0 {
 			fail = true

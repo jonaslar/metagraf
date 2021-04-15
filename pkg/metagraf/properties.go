@@ -4,13 +4,15 @@ import "github.com/pkg/errors"
 
 // Returns a metagraf adressable key for a property.
 func (mgp *MGProperty) MGKey() string {
-	return mgp.Source+"|"+mgp.Key
+	return mgp.Source + "|" + mgp.Key
 }
+
 // Sets the MGProperty Value to the Default value.
 func (mgp *MGProperty) DefaultValueAsValue() {
 	mgp.Value = mgp.Default
 }
 
+// Map a MGProperty to metaGraf EnvironmentVar
 func (mgp *MGProperty) ToEnvironmentVar() EnvironmentVar {
 	return EnvironmentVar{
 		Name:        mgp.Key,
@@ -33,6 +35,7 @@ func (mgp MGProperties) GetRequired() MGProperties {
 	}
 	return props
 }
+
 // Returns a slice of Keys
 func (mgp MGProperties) Keys() []string {
 	var keys []string
@@ -86,7 +89,7 @@ func (mg *MetaGraf) GetProperties() MGProperties {
 	props := MGProperties{}
 
 	// Config section, find parameters from
-	for _,conf := range mg.Spec.Config {
+	for _, conf := range mg.Spec.Config {
 		if len(conf.Options) == 0 {
 			continue
 		}
@@ -99,7 +102,7 @@ func (mg *MetaGraf) GetProperties() MGProperties {
 					Key:      opts.Name,
 					Value:    "",
 					Required: opts.Required,
-					Default: opts.Default,
+					Default:  opts.Default,
 				}
 				props[p.MGKey()] = p
 			}
@@ -110,7 +113,7 @@ func (mg *MetaGraf) GetProperties() MGProperties {
 					Key:      opts.Name,
 					Value:    "",
 					Required: opts.Required,
-					Default: opts.Default,
+					Default:  opts.Default,
 				}
 				props[p.MGKey()] = p
 			}
@@ -118,15 +121,19 @@ func (mg *MetaGraf) GetProperties() MGProperties {
 	}
 
 	// Environment Section
-	for _,env := range mg.Spec.Environment.Local {
-		if len(env.SecretFrom) > 0 {continue}
-		if len(env.EnvFrom) > 0 {continue}
+	for _, env := range mg.Spec.Environment.Local {
+		if len(env.SecretFrom) > 0 {
+			continue
+		}
+		if len(env.EnvFrom) > 0 {
+			continue
+		}
 		p := MGProperty{
 			Source:   "local",
 			Key:      env.Name,
 			Value:    "",
 			Required: env.Required,
-			Default: env.Default,
+			Default:  env.Default,
 		}
 
 		// Environment variables of type JVM_SYS_PROP will
@@ -137,30 +144,31 @@ func (mg *MetaGraf) GetProperties() MGProperties {
 		}
 		props[p.MGKey()] = p
 	}
-	for _,env := range mg.Spec.Environment.External.Introduces {
+	for _, env := range mg.Spec.Environment.External.Introduces {
 		p := MGProperty{
 			Source:   "external",
 			Key:      env.Name,
 			Value:    "",
 			Required: env.Required,
-			Default: env.Default,
+			Default:  env.Default,
 		}
 		props[p.MGKey()] = p
 	}
-	for _,env := range mg.Spec.Environment.External.Consumes {
+	for _, env := range mg.Spec.Environment.External.Consumes {
 		p := MGProperty{
 			Source:   "external",
 			Key:      env.Name,
 			Value:    "",
 			Required: env.Required,
-			Default: env.Default,
+			Default:  env.Default,
 		}
 		props[p.MGKey()] = p
 	}
 	return props
 }
 
-func (mgp MGProperties) GetByKey(key string) (MGProperty, error){
+// Returns a MGProperty by key (name) from MGProperties collection.
+func (mgp MGProperties) GetByKey(key string) (MGProperty, error) {
 	for _, p := range mgp {
 		if p.Key == key {
 			return p, nil

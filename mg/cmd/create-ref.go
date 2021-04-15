@@ -2,15 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/laetho/metagraf/internal/pkg/params"
+	"github.com/laetho/metagraf/pkg/metagraf"
+	"github.com/laetho/metagraf/pkg/modules"
 	"github.com/spf13/cobra"
-	"metagraf/internal/pkg/params/params"
-	"metagraf/pkg/metagraf"
-	"metagraf/pkg/modules"
 )
 
 func init() {
 	createCmd.AddCommand(createRefCmd)
-	createRefCmd.Flags().StringVarP(&Namespace, "namespace", "n","","namespace to fetch template form")
+	createRefCmd.Flags().StringVarP(&Namespace, "namespace", "n", "", "namespace to fetch template form")
 	createRefCmd.Flags().StringVarP(&Template, "template", "t", "metagraf-refdoc.md", "name of ConfigMap for go template")
 	createRefCmd.Flags().StringVarP(&Suffix, "suffix", "s", ".html", "file suffix of the generated content")
 	createRefCmd.Flags().StringVarP(&params.RefTemplateFile, "templatefile", "f", "", "file path to go template to use when creating reference doucment")

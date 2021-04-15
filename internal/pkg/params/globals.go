@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The metaGraf Authors
+Copyright 2021 The metaGraf Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,29 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package metagraf
+package params
 
-import (
-	"encoding/json"
-	"io/ioutil"
-	log "k8s.io/klog"
-	"os"
+var (
+
+	// Dryrun bool indicated if mg should do operations against a Kubernetes API.
+	Dryrun bool
+
+	// Output bool indicates if mg should output the generated objects.
+	Output bool
+
+	// Format value can be either json or yaml. Controls output format.
+	Format string = "json"
 )
-
-func Parse(filepath string) MetaGraf {
-	b, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		log.Error(err)
-		os.Exit(1)
-	}
-
-	err = nil
-	var mg MetaGraf
-
-	err = json.Unmarshal(b, &mg)
-	if err != nil {
-		log.Error(err)
-		os.Exit(1)
-	}
-	return mg
-}

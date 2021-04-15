@@ -18,43 +18,40 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/laetho/metagraf/internal/pkg/params"
 	log "k8s.io/klog"
 	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"metagraf/internal/pkg/params/params"
-	"metagraf/pkg/metagraf"
-	"metagraf/pkg/modules"
+	"github.com/laetho/metagraf/pkg/metagraf"
+	"github.com/laetho/metagraf/pkg/modules"
 )
 
 func init() {
 	RootCmd.AddCommand(createCmd)
 	createCmd.PersistentFlags().BoolVar(&Verbose, "verbose", false, "verbose output")
 	createCmd.PersistentFlags().BoolVar(&Output, "output", false, "also output objects")
-	createCmd.PersistentFlags().StringVarP(&Format, "format","o","json", "specify json or yaml, json id default")
+	createCmd.PersistentFlags().StringVarP(&Format, "format", "o", "json", "specify json or yaml, json id default")
 	createCmd.PersistentFlags().StringVar(&Version, "version", "", "Override version in metaGraf specification.")
 	createCmd.PersistentFlags().BoolVar(&Dryrun, "dryrun", false, "do not create objects, only output")
 	createCmd.AddCommand(createConfigMapCmd)
-	createCmd.AddCommand(createDeploymentConfigCmd)
 	createCmd.AddCommand(createDotCmd)
-	createCmd.AddCommand(createRefCmd)
 	createCmd.AddCommand(createSecretCmd)
 	createCmd.AddCommand(createRouteCmd)
-	createSecretCmd.Flags().StringVarP(&Namespace, "namespace", "n", "","namespace to work on, if not supplied it will use current working namespace")
+	createSecretCmd.Flags().StringVarP(&Namespace, "namespace", "n", "", "namespace to work on, if not supplied it will use current working namespace")
 	createSecretCmd.Flags().StringSliceVar(&CVars, "cvars", []string{}, "Slice of key=value pairs, seperated by ,")
 	createSecretCmd.Flags().BoolVarP(&CreateGlobals, "globals", "g", false, "Override default behavior and force creation of global secrets. Will not overwrite existing ones.")
-	createConfigMapCmd.Flags().StringVarP(&Namespace, "namespace", "n", "","namespace to work on, if not supplied it will use current working namespace")
+	createConfigMapCmd.Flags().StringVarP(&Namespace, "namespace", "n", "", "namespace to work on, if not supplied it will use current working namespace")
 	createConfigMapCmd.Flags().StringVar(&OName, "name", "", "Overrides name of application used to prefix configmaps.")
 	createConfigMapCmd.Flags().StringSliceVar(&CVars, "cvars", []string{}, "Slice of key=value pairs, seperated by ,")
-	createConfigMapCmd.Flags().StringVar(&params.PropertiesFile, "cvfile","", "File with component configuration values. (key=value pairs)")
-	createRouteCmd.Flags().StringVarP(&Namespace, "namespace", "n", "","namespace to work on, if not supplied it will use current working namespace")
+	createConfigMapCmd.Flags().StringVar(&params.PropertiesFile, "cvfile", "", "File with component configuration values. (key=value pairs)")
+	createRouteCmd.Flags().StringVarP(&Namespace, "namespace", "n", "", "namespace to work on, if not supplied it will use current working namespace")
 	createRouteCmd.Flags().StringVar(&OName, "name", "", "Overrides name of application.")
 	createRouteCmd.Flags().StringSliceVar(&CVars, "cvars", []string{}, "Slice of key=value pairs, seperated by ,")
-	createRouteCmd.Flags().StringVarP(&Context,"context", "c","/","Application context root. (\"/<context>\")")
+	createRouteCmd.Flags().StringVarP(&Context, "context", "c", "/", "Application context root. (\"/<context>\")")
 }
-
 
 var createCmd = &cobra.Command{
 	Use:   "create",
