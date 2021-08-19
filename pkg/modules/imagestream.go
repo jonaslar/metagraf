@@ -19,10 +19,12 @@ package modules
 import (
 	"context"
 	"fmt"
+	"os"
+
 	k8sclient "github.com/laetho/metagraf/internal/pkg/k8sclient"
+	"github.com/laetho/metagraf/internal/pkg/params"
 	"github.com/laetho/metagraf/pkg/metagraf"
 	log "k8s.io/klog"
-	"os"
 
 	imagev1 "github.com/openshift/api/image/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -35,8 +37,7 @@ func GenImageStream(mg *metagraf.MetaGraf, namespace string) {
 	log.V(2).Infof("Generated ImageStream name: %v", objname)
 
 	// Resource labels
-	l := make(map[string]string)
-	l["app"] = objname
+	l := Labels(objname, labelsFromParams(params.Labels))
 
 	objref := corev1.ObjectReference{}
 	objref.Kind = ""
@@ -74,8 +75,8 @@ func GenImageStream(mg *metagraf.MetaGraf, namespace string) {
 
 func StoreImageStream(obj imagev1.ImageStream) {
 
-	log.Infof("ResourceVersion: %v Length: %v", obj.ResourceVersion, len(obj.ResourceVersion))
-	log.Infof("Namespace: %v", NameSpace)
+	log.V(2).Infof("ResourceVersion: %v Length: %v", obj.ResourceVersion, len(obj.ResourceVersion))
+	log.V(2).Infof("Namespace: %v", NameSpace)
 
 	client := k8sclient.GetImageClient().ImageStreams(NameSpace)
 
@@ -86,15 +87,15 @@ func StoreImageStream(obj imagev1.ImageStream) {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		log.Infof("ImageStream: %v exists, skipping...", obj.Name)
+		log.V(2).Infof("ImageStream: %v exists, skipping...", obj.Name)
 	} else {
-		result, err := client.Create(context.TODO(), &obj, metav1.CreateOptions{})
+		_, err := client.Create(context.TODO(), &obj, metav1.CreateOptions{})
 		if err != nil {
 			log.Error(err)
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		log.Infof("Created ImageStream: %v(%v)", result.Name, obj.Name)
+		fmt.Println("Created ImageStream:", obj.Name, "in namespace:", NameSpace)
 	}
 }
 

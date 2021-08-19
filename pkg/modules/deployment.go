@@ -18,6 +18,9 @@ package modules
 
 import (
 	"context"
+	"strconv"
+	"strings"
+
 	"github.com/golang/glog"
 	"github.com/laetho/metagraf/internal/pkg/affinity"
 	"github.com/laetho/metagraf/internal/pkg/helpers"
@@ -26,8 +29,6 @@ import (
 	"github.com/laetho/metagraf/pkg/metagraf"
 	"github.com/spf13/viper"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"strconv"
-	"strings"
 
 	//corev1 "k8s.io/api/core/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -50,8 +51,7 @@ func GenDeployment(mg *metagraf.MetaGraf, namespace string) {
 	}
 
 	// Resource labels
-	l := make(map[string]string)
-	l["app"] = objname
+	l := Labels(objname, labelsFromParams(params.Labels))
 	l["deployment"] = objname
 
 	// Selector
@@ -97,6 +97,9 @@ func GenDeployment(mg *metagraf.MetaGraf, namespace string) {
 	}
 
 	EnvVars = GetEnvVars(mg, Variables)
+	if params.DownwardAPIEnvVars {
+		EnvVars = append(EnvVars, DownwardAPIEnvVars()...)
+	}
 
 	// Environment Variables from baserunimage
 	if BaseEnvs && HasImageInfo {
@@ -127,7 +130,7 @@ func GenDeployment(mg *metagraf.MetaGraf, namespace string) {
 	Container := corev1.Container{
 		Name:            objname,
 		Image:           imageRef(mg),
-		ImagePullPolicy: corev1.PullIfNotPresent,
+		ImagePullPolicy: PullPolicy,
 		Ports:           ContainerPorts,
 		VolumeMounts:    VolumeMounts,
 		Env:             EnvVars,
@@ -154,6 +157,7 @@ func GenDeployment(mg *metagraf.MetaGraf, namespace string) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   objname,
 			Labels: l,
+			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas:             &params.Replicas,
@@ -167,6 +171,7 @@ func GenDeployment(mg *metagraf.MetaGraf, namespace string) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   objname,
 					Labels: l,
+					Namespace: namespace,
 				},
 				Spec: corev1.PodSpec{
 					Containers: Containers,

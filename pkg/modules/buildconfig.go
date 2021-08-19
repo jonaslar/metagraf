@@ -19,20 +19,46 @@ package modules
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/laetho/metagraf/internal/pkg/helpers"
 	"github.com/laetho/metagraf/internal/pkg/imageurl"
 	"github.com/laetho/metagraf/internal/pkg/k8sclient"
 	"github.com/laetho/metagraf/internal/pkg/params"
 	log "k8s.io/klog"
-	"os"
-	"strings"
 
 	"github.com/laetho/metagraf/pkg/metagraf"
 
 	buildv1 "github.com/openshift/api/build/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	//"github.com/openshift/oc/pkg/helpers/source-to-image/tar"
 )
+
+func TriggerLocalBuild(mg metagraf.MetaGraf) {
+/*
+	br := buildv1.BuildRequest{
+		TypeMeta:              metav1.TypeMeta{},
+		ObjectMeta:            metav1.ObjectMeta{},
+	}
+	br.Kind = "BuildRequest"
+	br.APIVersion = "build.openshift.io/v1"
+	br.ObjectMeta.Name = mg.Name("","")
+	brt := buildv1.BuildTriggerCause{}
+	brt.Message = "Triggered by mg."
+	br.TriggeredBy = []buildv1.BuildTriggerCause{brt}
+	client := k8sclient.GetBuildClient()
+	build, err := client.BuildConfigs(params.NameSpace).Instantiate(context.TODO(), br.ObjectMeta.Name,&br, metav1.CreateOptions{})
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	fmt.Println("Started", build.Name)
+
+	tar.
+ */
+}
 
 func GenBuildConfig(mg *metagraf.MetaGraf) {
 	var buildsource buildv1.BuildSource
@@ -76,9 +102,7 @@ func GenBuildConfig(mg *metagraf.MetaGraf) {
 	}
 
 	// Resource labels
-	l := make(map[string]string)
-	l["app"] = objname
-	l["deploymentconfig"] = objname
+	l := Labels(objname, labelsFromParams(params.Labels))
 
 	km := Variables.KeyMap()
 	for _, e := range mg.Spec.Environment.Build {
@@ -117,14 +141,6 @@ func GenBuildConfig(mg *metagraf.MetaGraf) {
 			Labels: l,
 		},
 		Spec: buildv1.BuildConfigSpec{
-			Triggers: []buildv1.BuildTriggerPolicy{
-				{
-					Type: "generic",
-					GenericWebHook: &buildv1.WebHookTrigger{
-						Secret: "wakkawakkawakka",
-					},
-				},
-			},
 			RunPolicy: buildv1.BuildRunPolicySerial,
 			CommonSpec: buildv1.CommonSpec{
 				Source: buildsource,
@@ -169,16 +185,21 @@ func genGitBuildSource(mg *metagraf.MetaGraf) buildv1.BuildSource {
 		branch = mg.Spec.Branch
 	}
 
-	return buildv1.BuildSource{
+	bs := buildv1.BuildSource{
 		Type: "Git",
 		Git: &buildv1.GitBuildSource{
 			URI: mg.Spec.Repository,
 			Ref: branch,
 		},
-		SourceSecret: &corev1.LocalObjectReference{
-			Name: mg.Spec.RepSecRef,
-		},
 	}
+
+	if len(mg.Spec.RepSecRef) > 0 {
+		bs.SourceSecret = &corev1.LocalObjectReference{
+			Name: mg.Spec.RepSecRef,
+		}
+	}
+
+	return bs
 }
 
 func StoreBuildConfig(obj buildv1.BuildConfig) {

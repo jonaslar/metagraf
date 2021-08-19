@@ -19,15 +19,16 @@ package modules
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/laetho/metagraf/internal/pkg/helpers"
 	"github.com/laetho/metagraf/internal/pkg/k8sclient"
 	"github.com/laetho/metagraf/internal/pkg/params"
 	"github.com/openshift/api/image/docker10"
 	"github.com/spf13/viper"
 	log "k8s.io/klog"
-	"os"
-	"strconv"
-	"strings"
 
 	"github.com/laetho/metagraf/pkg/metagraf"
 
@@ -47,9 +48,9 @@ func GenDeploymentConfig(mg *metagraf.MetaGraf) {
 	}
 
 	// Resource labels
-	l := make(map[string]string)
-	l["app"] = objname
+	l := Labels(objname, labelsFromParams(params.Labels))
 	l["deploymentconfig"] = objname
+
 
 	// Selector
 	s := make(map[string]string)
@@ -96,6 +97,9 @@ func GenDeploymentConfig(mg *metagraf.MetaGraf) {
 	}
 
 	EnvVars = GetEnvVars(mg, Variables)
+	if params.DownwardAPIEnvVars {
+		EnvVars = append(EnvVars, DownwardAPIEnvVars()...)
+	}
 	// Environment Variables from baserunimage
 	if BaseEnvs && HasImageInfo {
 		for _, e := range ImageInfo.Config.Env {
@@ -138,7 +142,7 @@ func GenDeploymentConfig(mg *metagraf.MetaGraf) {
 	Container := corev1.Container{
 		Name:            objname,
 		Image:           imageRef(mg),
-		ImagePullPolicy: corev1.PullIfNotPresent,
+		ImagePullPolicy: PullPolicy,
 		Ports:           ContainerPorts,
 		VolumeMounts:    VolumeMounts,
 		Env:             EnvVars,
@@ -211,7 +215,11 @@ func imageRef(mg *metagraf.MetaGraf) string {
 			registry = Registry
 		}
 
+		if len(params.ImageName) > 0 {
+			return registry + "/" + ImageNS + "/" + params.ImageName + ":" + Tag
+		}
 		return registry + "/" + ImageNS + "/" + Name(mg) + ":" + Tag
+
 	}
 }
 
@@ -225,7 +233,7 @@ func volumes(mg *metagraf.MetaGraf, ImageInfo *docker10.DockerImage) ([]corev1.V
 	var VolumeMounts []corev1.VolumeMount
 
 	// Volumes & VolumeMounts from base image into podspec
-	log.Info("ImageInfo: Got ", len(ImageInfo.Config.Volumes), " volumes from base image...")
+	log.V(2).Info("ImageInfo: Got ", len(ImageInfo.Config.Volumes), " volumes from base image...")
 	for k := range ImageInfo.Config.Volumes {
 		// Volume Definitions
 		Volume := corev1.Volume{
@@ -324,7 +332,7 @@ func StoreDeploymentConfig(obj appsv1.DeploymentConfig) {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		fmt.Println("Updated DeploymentConfig: ", obj.Name, " in Namespace: ", obj.Name)
+		fmt.Println("Updated DeploymentConfig: ", obj.Name, " in Namespace: ", NameSpace)
 	} else {
 		result, err := client.Create(context.TODO(), &obj, metav1.CreateOptions{})
 		if err != nil {
@@ -332,7 +340,7 @@ func StoreDeploymentConfig(obj appsv1.DeploymentConfig) {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		fmt.Println("Created DeploymentConfig: ", result.Name, " in Namespace: ", obj.Name)
+		fmt.Println("Created DeploymentConfig: ", result.Name, " in Namespace: ", NameSpace)
 	}
 }
 

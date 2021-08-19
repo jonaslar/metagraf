@@ -1,0 +1,99 @@
+# This is an example .goreleaser.yml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+project_name: metaGraf
+
+before:
+  hooks:
+    # You may remove this if you don't use go modules.
+    - go mod tidy
+    - go vet -v ./...
+    - go test ./...
+builds:
+  -
+    id: "mg-linux"
+    dir: mg
+    binary: mg
+    env:
+    - CGO_ENABLED=0
+    - GITHASH=$(git rev-parse --short HEAD)
+    - GITTAG=$(git tag -l --points-at HEAD)
+    - GITBRANCH=$(git rev-parse --abbrev-ref HEAD) 
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - -extldflags '-static'
+      - -X 'metagraf/pkg/mgver.GitHash={{.Env.GITHASH}}'
+      - -X 'metagraf/pkg/mgver.GitTag={{.Env.GITTAG}}'
+      - -X 'metagraf/pkg/mgver.GitBranch={{.Env.GITBRANCH}}'
+  -
+    id: "mg-darwin"
+    dir: mg
+    binary: mg
+    env:
+      - CGO_ENABLED=0
+      - GITHASH=$(git rev-parse --short HEAD)
+      - GITTAG=$(git tag -l --points-at HEAD)
+      - GITBRANCH=$(git rev-parse --abbrev-ref HEAD)
+    goos:
+      - darwin
+    goarch:
+      - amd64
+    ldflags:
+      - -X 'metagraf/pkg/mgver.GitHash={{.Env.GITHASH}}'
+      - -X 'metagraf/pkg/mgver.GitTag={{.Env.GITTAG}}'
+      - -X 'metagraf/pkg/mgver.GitBranch={{.Env.GITBRANCH}}'
+  -
+    id: "mg-win"
+    dir: mg
+    binary: mg
+    env:
+      - CGO_ENABLED=0
+      - GITHASH=$(git rev-parse --short HEAD)
+      - GITTAG=$(git tag -l --points-at HEAD)
+      - GITBRANCH=$(git rev-parse --abbrev-ref HEAD)
+    goos:
+      - windows
+    goarch:
+      - amd64
+    ldflags:
+      - -X 'metagraf/pkg/mgver.GitHash={{.Env.GITHASH}}'
+      - -X 'metagraf/pkg/mgver.GitTag={{.Env.GITTAG}}'
+      - -X 'metagraf/pkg/mgver.GitBranch={{.Env.GITBRANCH}}'
+dockers:
+  -
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "ghcr.io/laetho/mg:latest"
+      - "ghcr.io/laetho/mg:{{.Version}}"
+    dockerfile: Dockerfile
+    use: buildx
+    skip_push: false
+    build_flag_templates:
+      - "--platform=linux/amd64"
+archives:
+  - format: tar.gz
+    id: mg
+    name_template: "mg-{{.Version}}-{{.Os}}-{{.Arch}}"
+    builds:
+      - "mg-linux"
+      - "mg-darwin"
+      - "mg-win"
+    wrap_in_directory: true
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "latest"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'

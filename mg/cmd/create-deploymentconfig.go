@@ -1,13 +1,14 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/laetho/metagraf/internal/pkg/params"
 	"github.com/laetho/metagraf/pkg/metagraf"
 	"github.com/laetho/metagraf/pkg/modules"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	log "k8s.io/klog"
-	"os"
 )
 
 func init() {
@@ -19,11 +20,13 @@ func init() {
 	createDeploymentConfigCmd.Flags().StringVar(&params.PropertiesFile, "cvfile", "", "File with component configuration values. (key=value pairs)")
 	createDeploymentConfigCmd.Flags().BoolVar(&BaseEnvs, "baseenv", false, "Hydrate deploymentconfig with baseimage environment variables")
 	createDeploymentConfigCmd.Flags().BoolVar(&Defaults, "defaults", false, "Populate Environment variables with default values from metaGraf")
+	createDeploymentConfigCmd.Flags().StringVar(&params.ImageName, "imagename", "", "Set image artifact name. Overrides imagename from metaGraf spec parsing behaviour.")
 	createDeploymentConfigCmd.Flags().StringVarP(&ImageNS, "imagens", "i", "", "Image Namespace, used to override default namespace")
 	createDeploymentConfigCmd.Flags().StringVarP(&Registry, "registry", "r", viper.GetString("registry"), "Specify container registry host")
 	createDeploymentConfigCmd.Flags().StringVarP(&Tag, "tag", "t", "latest", "specify custom tag")
 	createDeploymentConfigCmd.Flags().Int32Var(&params.Replicas, "replicas", params.DefaultReplicas, "Number of replicas.")
 	createDeploymentConfigCmd.Flags().BoolVar(&params.DisableDeploymentImageAliasing, "disable-aliasing", false, "Only applies to .spec.image references. Aliasing will use mg conventions for image references. Setting this to true will disable that behavior.")
+	createDeploymentConfigCmd.Flags().BoolVar(&params.DownwardAPIEnvVars,"downward-api-envvars",false,"Enables generation of environment variables from Downward API. An opinionated selection.")
 }
 
 var createDeploymentConfigCmd = &cobra.Command{

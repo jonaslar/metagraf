@@ -17,15 +17,16 @@ limitations under the License.
 package modules
 
 import (
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/blang/semver"
 	"github.com/laetho/metagraf/pkg/metagraf"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	log "k8s.io/klog"
 	"k8s.io/klog/v2"
-	"os"
-	"strconv"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -33,25 +34,23 @@ import (
 
 // This is a complete hack. todo: fix this shit, restructure packages
 var (
-	All           bool
 	NameSpace     string // Used to pass namespace from cmd to module to avoid import cycle.
 	Output        bool   // Flag passing hack
 	Version       string // Flag passing hack
-	Verbose       bool   // Flag passing hack
 	Dryrun        bool   // Flag passing hack
-	Branch        string // Flag passing hack
 	BaseEnvs      bool   //Flag passing hack
 	Defaults      bool   //Flag passing hack
 	Format        string // Flag passing hack
 	Template      string // Flag passing hack
 	Suffix        string // Flag passing hack
-	Enforce       bool
 	ImageNS       string
 	Registry      string
 	Tag           string
 	OName         string
 	Context       string // Application context root from FlagPassingHack.
 	CreateGlobals bool
+	// Sets the default pull policy for all metagraf modules
+	PullPolicy	  corev1.PullPolicy = corev1.PullIfNotPresent
 )
 
 var Variables metagraf.MGProperties
@@ -395,3 +394,51 @@ func GetGlobalConfigMapVolumes(mg *metagraf.MetaGraf, Volumes *[]corev1.Volume, 
 		}
 	}
 }
+
+func labelsFromParams(labels []string) map[string]string {
+	ret := make(map[string]string)
+	for _,s := range labels {
+		split := strings.Split(s,"=")
+		if len(split) != 2 {
+			continue
+		}
+		ret[split[0]] = split[1]
+	}
+	return ret
+}
+
+// Generate standardised labels map
+func Labels(name string, input map[string]string ) map[string]string {
+	// Resource labels
+	l := make(map[string]string)
+	l["app"] = name
+	for k, v := range input {
+		l[k] = v
+	}
+	return l
+}
+
+// Builds and returns slice of Kubernetes EnvVars for common values
+// extracted from DownwardAPI.
+func DownwardAPIEnvVars() []corev1.EnvVar {
+	vars := []corev1.EnvVar{}
+
+	// Map for fieldRefs: Name, fieldRef
+	fieldRefs := map[string]string{
+		"POD_NAME":"metadata.name",
+		"POD_NAMESPACE":"metadata.namespace",
+		"NODE_NAME":"spec.nodeName",
+	}
+
+	for k, v := range fieldRefs {
+		ev := corev1.EnvVar{
+			Name: k,
+			ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{
+				FieldPath: v,
+			}},
+		}
+		vars = append(vars, ev)
+	}
+	return vars
+}
+

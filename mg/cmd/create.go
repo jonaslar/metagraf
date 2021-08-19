@@ -18,9 +18,10 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/laetho/metagraf/internal/pkg/params"
 	log "k8s.io/klog"
-	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -36,6 +37,7 @@ func init() {
 	createCmd.PersistentFlags().StringVarP(&Format, "format", "o", "json", "specify json or yaml, json id default")
 	createCmd.PersistentFlags().StringVar(&Version, "version", "", "Override version in metaGraf specification.")
 	createCmd.PersistentFlags().BoolVar(&Dryrun, "dryrun", false, "do not create objects, only output")
+	createCmd.PersistentFlags().StringSliceVar(&params.Labels, "labels", []string{}, "Provide extra labels as key=value pairs, seperated by ,")
 	createCmd.AddCommand(createConfigMapCmd)
 	createCmd.AddCommand(createDotCmd)
 	createCmd.AddCommand(createSecretCmd)

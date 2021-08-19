@@ -21,9 +21,6 @@ import (
 	"github.com/laetho/metagraf/pkg/metagraf"
 	"github.com/laetho/metagraf/pkg/pdb"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	log "k8s.io/klog"
-	"os"
 )
 
 func init() {
@@ -35,26 +32,18 @@ func init() {
 var createPodDisruptionBudget = &cobra.Command{
 	Use:   "poddisruptionbudget <metagraf>",
 	Short: "create PodDisruptionBudget from metaGraf file",
+	Aliases: []string{"pdb"},
 	Long:  MGBanner + `create PodDisruptionBudget`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) < 1 {
-			log.V(2).Info(StrActiveProject, viper.Get("namespace"))
-			log.Error(StrMissingMetaGraf)
-			os.Exit(1)
-		}
+		requireMetagraf(args)
+		requireNamespace()
 
-		if len(Namespace) == 0 {
-			Namespace = viper.GetString("namespace")
-			if len(Namespace) == 0 {
-				log.Error(StrMissingNamespace)
-				os.Exit(1)
-			}
-		}
 		// Migration to params not complete.
 		params.Dryrun = Dryrun
 		params.Output = Output
+		params.Format = Format
 		mg := metagraf.Parse(args[0])
 
-		pdb.GenPodDisruptionBudget(&mg, params.Replicas)
+		pdb.GenDefaultPodDisruptionBudget(&mg)
 	},
 }

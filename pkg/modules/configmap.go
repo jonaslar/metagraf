@@ -20,13 +20,15 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"os"
+	"strings"
+
 	k8sclient "github.com/laetho/metagraf/internal/pkg/k8sclient"
+	"github.com/laetho/metagraf/internal/pkg/params"
 	"github.com/laetho/metagraf/pkg/metagraf"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	log "k8s.io/klog"
-	"os"
-	"strings"
 )
 
 /*
@@ -72,7 +74,7 @@ func FindMetagrafConfigMaps(mg *metagraf.MetaGraf) map[string]string {
 		}
 	}
 
-	log.Info("FindMetagrafConfigMaps(): Found", len(maps), " ConfigMaps to mount...")
+	log.V(2).Info("FindMetagrafConfigMaps(): Found", len(maps), " ConfigMaps to mount...")
 
 	return maps
 }
@@ -108,7 +110,7 @@ func GetMetagrafConfigsByType(mg *metagraf.MetaGraf, ctype string) []metagraf.Co
 	specific to NT internal workings for now.
 */
 func GenConfigMaps(mg *metagraf.MetaGraf) {
-	log.Info("GenConfigMaps: Handle", len(mg.Spec.Config), " configs...")
+	log.V(2).Info("GenConfigMaps: Handle", len(mg.Spec.Config), " configs...")
 	for _, c := range mg.Spec.Config {
 		if c.Type != "parameters" {
 			continue
@@ -129,8 +131,8 @@ func genConfigMapsFromConfig(conf *metagraf.Config, mg *metagraf.MetaGraf) {
 
 	objname := Name(mg)
 
-	l := make(map[string]string)
-	l["app"] = objname
+	// Resource labels
+	l := Labels(objname, labelsFromParams(params.Labels))
 
 	cm := corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
